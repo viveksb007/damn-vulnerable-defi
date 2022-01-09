@@ -34,7 +34,7 @@ describe('[Challenge] Naive receiver', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */   
-        await this.attackContract.drainAllReceiverFunds();
+        await this.attackContract.connect(attacker).drainAllReceiverFunds();
     });
 
     after(async function () {
