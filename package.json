@@ -31,8 +31,11 @@
     "@uniswap/v2-periphery": "1.1.0-beta.0",
     "chai": "4.3.4",
     "ethereum-waffle": "3.4.0",
-    "ethers": "5.4.7",
+    "ethers": "^5.5.3",
     "hardhat": "2.6.4",
     "hardhat-dependency-compiler": "1.1.1"
+  },
+  "dependencies": {
+    "web3": "^1.6.1"
   }
 }

